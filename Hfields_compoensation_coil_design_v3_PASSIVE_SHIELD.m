@@ -46,7 +46,7 @@ set(h1,'AutoScale','on', 'AutoScaleFactor', 2);
 
 %Find x = 0 index
 zero_ind=find(X==0)/length(X);
-zero_ind = zero_ind(end);
+zero_ind = zero_ind(end); 
 
 %Make integral current go to zero:
 JX_lineDensity = JX(:,zero_ind)+abs(sum(JX(:,zero_ind)))/length(JX(:,zero_ind));
