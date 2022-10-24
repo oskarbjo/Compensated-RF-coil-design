@@ -1,10 +1,15 @@
 %% Import H field data and calculate surface currents
 
+%Remember that it's easier to mirror one side of the shield to the other,
+%rather than trying to make the lobes on each side the exact same size
+%manually. This works just as well!
+
 clc;
 % close all;
 % Use 3D volume field export for Z=Ground plane
-path="C:\Users\objoerkqvist\OneDrive - ETH Zurich\Documents\CST\Harvesting coil designs\vertical shielded coil v4\GP_currents_v4.txt";
-% path="C:\Users\objoerkqvist\OneDrive - ETH Zurich\Documents\CST\Harvesting coil designs\vertical shielded coil v4\shield_currents_check_v4.txt";
+% path="C:\Users\objoerkqvist\OneDrive - ETH Zurich\Documents\CST\Harvesting coil designs\Vertical shielded coil v7 quadrature\POS1_Hfield.txt"; %Current shield!
+path="C:\Users\objoerkqvist\OneDrive - ETH Zurich\Documents\CST\Harvesting coil designs\Simulations for RF harvest publication 1\GP current data\fig1_GP_current_data.txt";
+
 data = importdata(path);
 data=struct2cell(data);
 x_ind = 1;
@@ -29,13 +34,28 @@ Jx = J(:,1);
 Jy = J(:,2);
 
 %calculate x y grid, assuming perfect square grid
+
 [dummie,xmin_ind] = min(x);
 [dummie,xmax_ind] = max(x);
 shift = max(x)-max(y);
 [X,Y] = meshgrid(x(xmin_ind:xmax_ind),x(xmin_ind:xmax_ind)-shift);
+Y=round(Y,5);
+X=round(X,5);
 JX = reshape(Jx,size(X))';
 JY = reshape(Jy,size(X))';
 J_Abs = sqrt(JX.^2 + JY.^2);
+
+
+%% %%%%%%%%%%%%%% If 90 degree rotation needed!!: %%%%%%%%%%% 
+JX2=JX;
+JY2=JY;
+X2=X;
+Y2=Y;
+
+JX = rot90(JX);
+JY = rot90(JY);
+
+    
 
 figure();
 h1=quiver(X,Y,JX,JY);
@@ -45,8 +65,8 @@ set(h1,'AutoScale','on', 'AutoScaleFactor', 2);
 
 
 %Find x = 0 index
-zero_ind=find(X==0)/length(X);
-zero_ind = zero_ind(end);
+[rowX,colX,dat]=find(X==0);
+zero_ind = colX(end); 
 
 %Make integral current go to zero:
 JX_lineDensity = JX(:,zero_ind)+abs(sum(JX(:,zero_ind)))/length(JX(:,zero_ind));
@@ -68,11 +88,11 @@ plot(Y(:,zero_ind),abs(cumsum(JX_lineDensity)));
 
 %% Divide middle section into N segments of equal current
 
-N = 16; %Number of divisions (should be even number)
+N = 16.; %Number of divisions 
 dx = (x(2)-x(1))*1e-3;
 zci = @(v) find(diff(sign(v))); %zero crossing index finder function
 ind=zci(JX_lineDensity);
-minDistanceFromZC = 25; %Move shields away from local zero
+minDistanceFromZC = 2; %*** OPTIONAL *** Move shields away from local zero 
 ind1 = ind(1) + minDistanceFromZC;
 ind2=ind(2)+1 - minDistanceFromZC;
 
@@ -128,36 +148,22 @@ I=2/numel(indices);
 % Option 1: Midway between calculated index points
 index_list = [ind1,indices+ind1];
 seedPointIndices=round(mean([index_list(1:end-1);index_list(2:end)]));
-shiftPts = [-1,0,-3,-2,-1,1,0,0,-4,-5,0,0,0,0];
+shiftPts = [-7,2,3,3,4,6,11,-7,0,0,0,0,0,0]; %Seed point shifts, ADJUST ACCORDING TO DATA SET
 seedPointIndices = seedPointIndices - shiftPts;
-% seedPointInd(:)=0;
-%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%
-% Option 2: Point that splits current in half
-% shiftPts1=0;
-% shiftPts2=0;
-% shiftPts3=0;
-% shiftPts4=0;
-% shiftPts5=0;
-% shiftPts6=0;
-% shiftPts7=0;
-% shiftPts8=0;
-% shiftPts9=0;
-% shiftPts10=0;
-% shiftPts = zeros(1,numel(seedPointInd));
-% seedPointIndices = ind1 + seedPointInd - shiftPts;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 
 
 
 [max_value,idx]=max(J_Abs(:));
 [xStart,yStart,z,w]=ind2sub(size(J_Abs),idx);
 streamLineList = {};
-streamLineLength = 15000;
-streamLineDx = [6,5,5,5,4,4,3]; %Step size for each individual shield trace - should have N/2 elements, where N is number of shield conductors
+streamLineLength = 250000; %ADJUST ACCORDING TO DATA SET
+%ADJUST ACCORDING TO DATA SET:
+streamLineDx = [2,2,2,2,2,2,2]; %Step size for each individual shield trace - should have N/2 elements, where N is number of shield conductors
 streamLineDx = [fliplr(streamLineDx),streamLineDx];
-cutPoints = [2,2,2,2,2,2,4];%Cutpoints * streamLineDx = length cut from streamline to facilitate interconnections
+cutPoints = [4,6,4,4,4,4,4];%Cutpoints * streamLineDx = length cut from streamline to facilitate interconnections
 cutPoints = [fliplr(cutPoints),cutPoints];
 
 %Optional fix for streamlines that are too close to J = 0
@@ -179,6 +185,7 @@ end
 
 %Crop streamlines to a single revolution:
 for i = 1:length(streamLineList)
+    i
     streamLine = streamLineList{i};
     zci = @(v) find(diff(sign(v)));
     ind=zci(streamLine(:,1)+xOffsets(i));
@@ -235,8 +242,10 @@ end
 
 streamLineList
 
-figure();
+hold off;
+offsetY = [0,0,0,0,0.2,0.3,0.5,0,0,0,0,0,0,0]; %ADJUST ACCORDING TO DATA SET
 for i = 1:length(streamLineList)
+    streamLineList{i}(:,2) = streamLineList{i}(:,2) + offsetY(i);
     XY=streamLineList{i};
     plot(XY(:,1),XY(:,2),'linewidth',2);
     hold on;
@@ -256,6 +265,7 @@ for i = 1:length(streamLineList)
 end
 
 streamLineLengths
+'Area ratios (should all be 1):'
 allAreas./(fliplr(allAreas))
 
 
@@ -275,7 +285,7 @@ allAreas./(fliplr(allAreas))
 % 6. Lower and upper bounds of integral give width of trace at this point
 % on the streamline
 
-maxWidth = 0.15; %[mm], adjust widths according to each trace length
+maxWidth = 0.12; %[mm], adjust widths according to each trace length
 traceStandardWidth=maxWidth(1);
 Npts = 3; %Should be an odd number
 traceOutlines = cell(length(streamLineList),1);
@@ -378,7 +388,11 @@ scatter(wireMountPoints(:,3),wireMountPoints(:,4),'r');
 scatter(capacitorMountPoints(:,1),capacitorMountPoints(:,2),'b');
 scatter(capacitorMountPoints(:,3),capacitorMountPoints(:,4),'g');
 
-%% Write polygons and conncetion points to file
+%% Write polygons and connection points to file
+
+%Save the old files before new exports or the older CST files will not be
+%generated correctly. Also delete the files in the write directory to
+%ensure that no old polygons remain
 
 path = "C:\Users\objoerkqvist\OneDrive - ETH Zurich\Documents\MATLAB\Coil design\polygon_export\";
 
@@ -400,3 +414,6 @@ fclose(fileID);
 fileID = fopen(path + "capPoints" + '.txt','w');
 fprintf(fileID,'%d %d %d %d \n',capacitorMountPoints');
 fclose(fileID);
+
+
+
