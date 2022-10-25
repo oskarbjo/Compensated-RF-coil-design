@@ -93,7 +93,7 @@ N = 30; %Number of divisions
 dx = (x(2)-x(1))*1e-3;
 zci = @(v) find(diff(sign(v))); %zero crossing index finder function
 ind=zci(JX_lineDensity);
-minDistanceFromZC = 2; %*** OPTIONAL *** Move shields away from local zero 
+minDistanceFromZC = 20; %*** OPTIONAL *** Move shields away from local zero 
 ind1 = ind(1) + minDistanceFromZC;
 ind2=ind(2)+1 - minDistanceFromZC;
 
@@ -147,24 +147,22 @@ I=2/numel(indices);
 %% Calculate streamline seed points and the corresponding streamlines
 %%%%%%%%%%%%%%%%%%%%%
 % Option 1: Midway between calculated index points
+N_ind=26
 index_list = [ind1,indices+ind1];
 seedPointIndices=round(mean([index_list(1:end-1);index_list(2:end)]));
-shiftPts = [-7,2,3,3,4,6,11,-7,0,0,0,0,0,0]; %Seed point shifts, ADJUST ACCORDING TO DATA SET
+shiftPts = zeros(1,N_ind); %Seed point shifts, ADJUST ACCORDING TO DATA SET
 seedPointIndices = seedPointIndices - shiftPts;
-
-
-
 
 
 
 [max_value,idx]=max(J_Abs(:));
 [xStart,yStart,z,w]=ind2sub(size(J_Abs),idx);
 streamLineList = {};
-streamLineLength = 250000; %ADJUST ACCORDING TO DATA SET
+streamLineLength = 950000; %ADJUST ACCORDING TO DATA SET
 %ADJUST ACCORDING TO DATA SET:
-streamLineDx = [2,2,2,2,2,2,2]; %Step size for each individual shield trace - should have N/2 elements, where N is number of shield conductors
+streamLineDx = ones(1,N_ind); %Step size for each individual shield trace - should have N/2 elements, where N is number of shield conductors
 streamLineDx = [fliplr(streamLineDx),streamLineDx];
-cutPoints = [4,6,4,4,4,4,4];%Cutpoints * streamLineDx = length cut from streamline to facilitate interconnections
+cutPoints = ones(1,N_ind);%Cutpoints * streamLineDx = length cut from streamline to facilitate interconnections
 cutPoints = [fliplr(cutPoints),cutPoints];
 
 %Optional fix for streamlines that are too close to J = 0
